@@ -9,10 +9,26 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from mt5.api import BasicMt5
 
 
+class BullinUtil():
+    def sma(self):
+        """计算简单移动平均线"""
+        """https://blog.csdn.net/u011702002/article/details/78242400"""
+        pass
+
+
 class BullinTwoSide(BasicMt5):
     """
     布林带1-2s交易策略
     """
+
+    def follow_trend(self):
+        """跟随趋势玩法"""
+        pass
+
+    def reverse_trend(self):
+        """逆向趋势玩法"""
+        pass
+
 
     def get_current_open(self):
         """获取当前的风险敞口 是买入还是卖出  返回当前持有头寸 """
