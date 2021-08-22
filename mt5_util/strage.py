@@ -147,10 +147,6 @@ class BullinTwoSide(BasicMt5):
                     leiji.append(yingli[-1] + (leiji and leiji[-1] or 0 ))
 
         print("yingli",yingli,"close",close,"leiji",leiji)
-        # 柱状图
-        # df = pd.DataFrame(
-        #     {'yingli': yingli,  "leiji": leiji, "x": range(num)},
-        #     columns=['zero', 'yingli'])
 
         df2 = pd.DataFrame({'yingli': yingli,
                              "leiji": leiji,
@@ -164,7 +160,10 @@ class BullinTwoSide(BasicMt5):
         plt.show()
 
     def predict_trend(self, rawlist):
-        """ 根据预设的方法来猜测趋势 """
+        """
+        根据预设的方法来猜测趋势
+        在这里返回购买的方向
+        """
         rawlist = [ i["收盘"] for i in rawlist]
         print("rawlist",rawlist)
         if "buy"  == BullinUtil().get_price_status(rawlist)["current_pos"]:
