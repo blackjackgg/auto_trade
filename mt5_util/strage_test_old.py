@@ -13,8 +13,8 @@ import time
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.blocking import BlockingScheduler
 
-from mt5 import setting
-from mt5.api import loginmt5
+from mt5_util import setting
+from mt5_util.api import loginmt5
 
 
 class BasicMt5:
