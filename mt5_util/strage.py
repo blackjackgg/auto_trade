@@ -127,24 +127,26 @@ class BullinTwoSide(BasicMt5):
         his = self.get_history(num=num, period=period)
         yingli = []  # 盈利
         leiji = []
+        close = []
         for index, i in enumerate(his):
             if index > 22 and i != his[-1]:
                 rawlist = his[index - 22 :index]
                 direct = self.predict_trend(rawlist)
+                close.append(i["收盘"])
 
                 if direct == "buy":
                     profit = his[index+1]["差价"] >= 0 and 1 or -1
                     yingli.append(his[index+1]["差价"] * profit)
-                    leiji.append(sum(yingli))
-                if direct == "sell":
+                    leiji.append(yingli[-1] + (leiji and leiji[-1] or  0))
+                elif direct == "sell":
                     profit = his[index + 1]["差价"] <= 0 and 1 or -1
                     yingli.append(his[index + 1]["差价"] * profit)
-                    leiji.append(sum(yingli))
+                    leiji.append(yingli[-1] + (leiji and leiji[-1] or 0))
                 else:
                     yingli.append(0)
-                    leiji.append(sum(yingli))
+                    leiji.append(yingli[-1] + (leiji and leiji[-1] or 0 ))
 
-        print("yingli",yingli)
+        print("yingli",yingli,"close",close,"leiji",leiji)
         # 柱状图
         # df = pd.DataFrame(
         #     {'yingli': yingli,  "leiji": leiji, "x": range(num)},
@@ -152,9 +154,10 @@ class BullinTwoSide(BasicMt5):
 
         df2 = pd.DataFrame({'yingli': yingli,
                              "leiji": leiji,
-                            "x": range(num),
+                            "close": close,
+                            # "x": range(num),
                             },
-                           columns=['leiji', 'yingli'])
+                           columns=['leiji', 'yingli',"close"])
 
         # df.plot(kind='bar')  ## 默认是折线图   这是盈利曲线 area  bar
         df2.plot()
@@ -166,7 +169,7 @@ class BullinTwoSide(BasicMt5):
         print("rawlist",rawlist)
         if "buy"  == BullinUtil().get_price_status(rawlist)["current_pos"]:
             return "buy"
-        if "sell"  == BullinUtil().get_price_status(rawlist)["current_pos"]:
+        elif "sell"  == BullinUtil().get_price_status(rawlist)["current_pos"]:
             return  "sell"
         return  None
 
