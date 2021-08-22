@@ -94,33 +94,13 @@ class BullinUtil():
         pre_pos = get_pos(last_2_point)
         current_pos = get_pos(last_point)
         print(current_pos, pre_pos)
-        return {"current_pos": current_pos, "pre_pos": pre_pos}
+        return {"current_pos": current_pos, "pre_pos": pre_pos, **res}
 
 
-class BullinTwoSide(BasicMt5):
+class BullinTwoSideSimple(BasicMt5):
     """
-    布林带1-2s交易策略
+    布林带1-2sd交易策略 以为以前一个收盘价作为预测点  下一个价格的收盘开盘差价作为盈利亏损计算
     """
-
-    def follow_trend(self):
-        """跟随趋势玩法"""
-        pass
-
-    def reverse_trend(self):
-        """逆向趋势玩法"""
-        pass
-
-    def get_current_open(self):
-        """获取当前的风险敞口 是买入还是卖出  返回当前持有头寸 """
-        pass
-
-    def get_lose_info(self):
-        """获取失败信息  绘制亏损曲线图 打印最大亏损和总计亏损"""
-        pass
-
-    def get_win_info(self):
-        """获取盈利信息  绘制盈利曲线图 打印最大盈利和总计盈利"""
-        pass
 
     def test_period_profit(self, period=None, num=100):
         """某个周期盈利能力测试  默认测试100条数据  生产盈利曲线！"""
@@ -130,30 +110,30 @@ class BullinTwoSide(BasicMt5):
         close = []
         for index, i in enumerate(his):
             if index > 22 and i != his[-1]:
-                rawlist = his[index - 22 :index]
+                rawlist = his[index - 22:index]
                 direct = self.predict_trend(rawlist)
                 close.append(i["收盘"])
 
                 if direct == "buy":
-                    profit = his[index+1]["差价"] >= 0 and 1 or -1
-                    yingli.append(his[index+1]["差价"] * profit)
-                    leiji.append(yingli[-1] + (leiji and leiji[-1] or  0))
+                    profit = his[index + 1]["差价"] >= 0 and 1 or -1
+                    yingli.append(his[index + 1]["差价"] * profit)
+                    leiji.append(yingli[-1] + (leiji and leiji[-1] or 0))
                 elif direct == "sell":
                     profit = his[index + 1]["差价"] <= 0 and 1 or -1
                     yingli.append(his[index + 1]["差价"] * profit)
                     leiji.append(yingli[-1] + (leiji and leiji[-1] or 0))
                 else:
                     yingli.append(0)
-                    leiji.append(yingli[-1] + (leiji and leiji[-1] or 0 ))
+                    leiji.append(yingli[-1] + (leiji and leiji[-1] or 0))
 
-        print("yingli",yingli,"close",close,"leiji",leiji)
+        print("yingli", yingli, "close", close, "leiji", leiji)
 
         df2 = pd.DataFrame({'yingli': yingli,
-                             "leiji": leiji,
+                            "leiji": leiji,
                             "close": close,
                             # "x": range(num),
                             },
-                           columns=['leiji', 'yingli',"close"])
+                           columns=['leiji', 'yingli', "close"])
 
         # df.plot(kind='bar')  ## 默认是折线图   这是盈利曲线 area  bar
         df2.plot()
@@ -164,13 +144,71 @@ class BullinTwoSide(BasicMt5):
         根据预设的方法来猜测趋势
         在这里返回购买的方向
         """
-        rawlist = [ i["收盘"] for i in rawlist]
-        print("rawlist",rawlist)
-        if "buy"  == BullinUtil().get_price_status(rawlist)["current_pos"]:
+        rawlist = [i["收盘"] for i in rawlist]
+        print("rawlist", rawlist)
+        if "buy" == BullinUtil().get_price_status(rawlist)["current_pos"]:
             return "buy"
-        elif "sell"  == BullinUtil().get_price_status(rawlist)["current_pos"]:
-            return  "sell"
-        return  None
+        elif "sell" == BullinUtil().get_price_status(rawlist)["current_pos"]:
+            return "sell"
+        return None
+
+
+class BullinTwoSide(BasicMt5):
+    """
+    布林带1-2s交易策略 带止损止盈
+    以第二个sd为标准 超过2个sd
+    """
+
+    def test_period_profit(self, period=None, num=100):
+        """某个周期盈利能力测试  默认测试100条数据  生产盈利曲线！"""
+        his = self.get_history(num=num, period=period)
+        yingli = []  # 盈利
+        leiji = []
+        close = []
+        for index, i in enumerate(his):
+            if index > 22 and i != his[-1]:
+                rawlist = his[index - 22:index]
+                res = self.predict_trend(rawlist)
+                close.append(i["收盘"])
+
+                if res and res["direct"] == "buy":
+                    profit = his[index + 1]["差价"] >= 0 and 1 or -1
+                    yingli.append(his[index + 1]["差价"] * profit)
+                    leiji.append(yingli[-1] + (leiji and leiji[-1] or 0))
+                elif res and res["direct"] == "sell":
+                    profit = his[index + 1]["差价"] <= 0 and -1 or 1
+                    yingli.append(his[index + 1]["差价"] * profit)
+                    leiji.append(yingli[-1] + (leiji and leiji[-1] or 0))
+                else:
+                    yingli.append(0)
+                    leiji.append(yingli[-1] + (leiji and leiji[-1] or 0))
+
+        print("yingli", yingli, "close", close, "leiji", leiji)
+
+        df2 = pd.DataFrame({'yingli': yingli,
+                            "leiji": leiji,
+                            "close": close,
+                            # "x": range(num),
+                            },
+                           columns=['leiji', 'yingli', "close"])
+
+        # df.plot(kind='bar')  ## 默认是折线图   这是盈利曲线 area  bar
+        df2.plot()
+        plt.show()
+
+    def predict_trend(self, rawlist):
+        """
+        根据预设的方法来猜测趋势
+        在这里返回购买的方向
+        """
+        rawlist = [i["收盘"] for i in rawlist]
+        print("rawlist", rawlist)
+        res = BullinUtil().get_price_status(rawlist)
+        if "buy" == res["current_pos"]:
+            return {"direct":"buy","zhiying":res["2sd"][-1],"zhisun":res["sma"][-1]}
+        elif "sell" == BullinUtil().get_price_status(rawlist)["current_pos"]:
+            return {"direct":"sell","zhiying":res["-2sd"][-1],"zhisun":res["sma"][-1]}
+        return None
 
 
 if __name__ == '__main__':
