@@ -4,6 +4,8 @@ import random
 from pprint import pprint
 import matplotlib as mpl
 
+import plot
+
 mpl.rcParams['font.sans-serif'] = ['KaiTi', 'SimHei', 'FangSong']  # 汉字字体,优先使用楷体，如果找不到楷体，则使用黑体
 mpl.rcParams['font.size'] = 12  # 字体大小
 mpl.rcParams['axes.unicode_minus'] = False  # 正常显示负号
@@ -126,18 +128,13 @@ class BullinTwoSideSimple(BasicMt5):
                     yingli.append(0)
                     leiji.append(yingli[-1] + (leiji and leiji[-1] or 0))
 
-        print("yingli", yingli, "close", close, "leiji", leiji)
+        datadict = {'yingli': yingli,
+                    "leiji": leiji,
+                    "close": close,
+                    }
 
-        df2 = pd.DataFrame({'yingli': yingli,
-                            "leiji": leiji,
-                            "close": close,
-                            # "x": range(num),
-                            },
-                           columns=['leiji', 'yingli', "close"])
-
-        # df.plot(kind='bar')  ## 默认是折线图   这是盈利曲线 area  bar
-        df2.plot()
-        plt.show()
+        # 绘图
+        plot.plot_line(datadict)
 
     def predict_trend(self, rawlist):
         """
@@ -157,44 +154,86 @@ class BullinTwoSide(BasicMt5):
     """
     布林带1-2s交易策略 带止损止盈
     以第二个sd为标准 超过2个sd
+
+    实现了一套完整的方法
+    只需要专注于
+    def stop_loss
+    def take_profit
+    def predict_trend
+    三个函数的写作即可！
     """
 
     def test_period_profit(self, period=None, num=100):
         """某个周期盈利能力测试  默认测试100条数据  生产盈利曲线！"""
         his = self.get_history(num=num, period=period)
-        yingli = []  # 盈利
-        leiji = []
+        profit = []  # 盈利
+        total_profit = []
         close = []
         for index, i in enumerate(his):
             if index > 22 and i != his[-1]:
-                rawlist = his[index - 22:index]
-                res = self.predict_trend(rawlist)
                 close.append(i["收盘"])
+                total_profit.append(profit[-1] + (total_profit and total_profit[-1] or 0))
+                profit = self.update_profit(his, index, profit)
 
-                if res and res["direct"] == "buy":
-                    profit = his[index + 1]["差价"] >= 0 and 1 or -1
-                    yingli.append(his[index + 1]["差价"] * profit)
-                    leiji.append(yingli[-1] + (leiji and leiji[-1] or 0))
-                elif res and res["direct"] == "sell":
-                    profit = his[index + 1]["差价"] <= 0 and -1 or 1
-                    yingli.append(his[index + 1]["差价"] * profit)
-                    leiji.append(yingli[-1] + (leiji and leiji[-1] or 0))
-                else:
-                    yingli.append(0)
-                    leiji.append(yingli[-1] + (leiji and leiji[-1] or 0))
+        datadict = {'profit': profit,
+                    "total_profit": total_profit,
+                    "close": close,
+                    }
+        plot.plot_line(datadict)
 
-        print("yingli", yingli, "close", close, "leiji", leiji)
+    def update_profit(self, his, index, profit):
+        """计算单次投入的盈利 通过某段时间的20天sma值来计算"""
+        rawlist = his[index - 22:index]
+        res = self.predict_trend(rawlist)
+        if res:
+            win_money = self.get_win_money(his, index, res["direct"])
+            profit.append(his[index + 1]["差价"] * win_money)
+        else:
+            profit.append(0)
+        return profit
 
-        df2 = pd.DataFrame({'yingli': yingli,
-                            "leiji": leiji,
-                            "close": close,
-                            # "x": range(num),
-                            },
-                           columns=['leiji', 'yingli', "close"])
+    def get_win_money(self, his, index, direct):
+        """通过比较止损 止盈 和收盘价来判断 某次进场出场的收益"""
+        in_point = his[index]["收盘"]
+        out_point = self.get_out_point(his, index, direct)
+        win_money = (out_point - in_point) * (direct and 1 or -1)
+        return win_money
 
-        # df.plot(kind='bar')  ## 默认是折线图   这是盈利曲线 area  bar
-        df2.plot()
-        plt.show()
+    def get_out_point(self, his, index, direct):
+        """计算出场点"""
+        stop_loss = self.stop_loss()
+        take_profit = self.take_profit()
+
+        next_day_close = his[index + 1]["收盘"]
+        next_day_min = his[index + 1]["最低价"]
+        next_day_max = his[index + 1]["最高价"]
+        if direct:
+            if next_day_min <= stop_loss:
+                out_point = stop_loss
+            elif next_day_max >= take_profit:
+                out_point = take_profit
+            else:
+                out_point = next_day_close
+
+        else: # 卖空的情况
+            if next_day_max >= stop_loss:
+                out_point = stop_loss
+            elif next_day_min <= take_profit:
+                out_point = take_profit
+            else:
+                out_point = next_day_close
+
+        return out_point
+
+
+
+    def stop_loss(self):
+        """止损点"""
+        return 100
+
+    def take_profit(self):
+        """止盈出场点"""
+        return 200
 
     def predict_trend(self, rawlist):
         """
@@ -205,9 +244,9 @@ class BullinTwoSide(BasicMt5):
         print("rawlist", rawlist)
         res = BullinUtil().get_price_status(rawlist)
         if "buy" == res["current_pos"]:
-            return {"direct":"buy","zhiying":res["2sd"][-1],"zhisun":res["sma"][-1]}
+            return {"direct": "buy", "zhiying": res["2sd"][-1], "zhisun": res["sma"][-1]}
         elif "sell" == BullinUtil().get_price_status(rawlist)["current_pos"]:
-            return {"direct":"sell","zhiying":res["-2sd"][-1],"zhisun":res["sma"][-1]}
+            return {"direct": "sell", "zhiying": res["-2sd"][-1], "zhisun": res["sma"][-1]}
         return None
 
 
