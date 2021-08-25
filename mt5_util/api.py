@@ -2,6 +2,8 @@
 import MetaTrader5 as mt5
 from apscheduler.schedulers.blocking import BlockingScheduler
 
+def mean(a,b):
+    return (a + b) /2
 
 def loginmt5(account, password, server):
     """登录mt5返回实例"""

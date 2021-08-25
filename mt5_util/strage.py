@@ -3,6 +3,7 @@ import datetime
 import random
 from pprint import pprint
 import matplotlib as mpl
+from mt5_util.api import mean
 
 import plot
 
@@ -79,10 +80,10 @@ class BullinUtil():
         center_down_range = [res["-1sd"][-1], res["sma"][-1]]  # 中间三无地带
         center_up_range = [res["sma"][-1], res["1sd"][-1]]  # 中间三无地带
 
-        print("center", center_up_range, center_down_range)
+        # print("center", center_up_range, center_down_range)
         buy_range = [res["1sd"][-1], res["2sd"][-1]]  # 上带
         sell_range = [res["-2sd"][-1], res["-1sd"][-1]]  # 下带
-        print("buy_sell", center_up_range, center_down_range)
+        # print("buy_sell", center_up_range, center_down_range)
 
         def get_pos(point):
             center_up = is_in_range(point, center_up_range) and "center_up"
@@ -95,7 +96,7 @@ class BullinUtil():
         last_2_point = res['dataset'][-2]
         pre_pos = get_pos(last_2_point)
         current_pos = get_pos(last_point)
-        print(current_pos, pre_pos)
+        print("current_pos",current_pos, pre_pos)
         return {"current_pos": current_pos, "pre_pos": pre_pos, **res}
 
 
@@ -175,20 +176,23 @@ class BullinTwoSide(BasicMt5):
                 profit = self.update_profit(his, index, profit)
                 total_profit.append(profit[-1] + (total_profit and total_profit[-1] or 0))
 
-
         datadict = {'profit': profit,
                     "total_profit": total_profit,
                     "close": close,
                     }
         plot.plot_line(datadict)
+        plot.plot_line({"close": close})
 
     def update_profit(self, his, index, profit):
         """计算单次投入的盈利 通过某段时间的20天sma值来计算"""
         rawlist = his[index - 22:index]
         res = self.predict_trend(rawlist)
+        print("updateprofit",res)
         if res:
-            win_money = self.get_win_money(his, index, res["direct"])
-            profit.append(his[index + 1]["差价"] * win_money)
+            direct2 = res["direct"] == "buy"
+            print("Seconddirect",direct2)
+            win_money = self.get_win_money(his, index,direct2)
+            profit.append(win_money * 1000)
         else:
             profit.append(0)
         return profit
@@ -208,7 +212,10 @@ class BullinTwoSide(BasicMt5):
         next_day_close = his[index + 1]["收盘"]
         next_day_min = his[index + 1]["最低价"]
         next_day_max = his[index + 1]["最高价"]
+
+        print("getoutdirect",direct)
         if direct:
+            print("buyin")
             if stop_loss and next_day_min <= stop_loss:
                 out_point = stop_loss
             elif take_profit and next_day_max >= take_profit:
@@ -217,6 +224,7 @@ class BullinTwoSide(BasicMt5):
                 out_point = next_day_close
 
         else:  # 卖空的情况
+            print("Sellout")
             if stop_loss and next_day_max >= stop_loss:
                 out_point = stop_loss
             elif take_profit and next_day_min <= take_profit:
@@ -254,9 +262,24 @@ class BullinTwoSide(BasicMt5):
         print("rawlist", rawlist)
         res = BullinUtil().get_price_status(rawlist)
         if "buy" == res["current_pos"]:
-            return {"direct": "buy", "zhiying": res["2sd"][-1], "zhisun": res["sma"][-1]}
-        elif "sell" == BullinUtil().get_price_status(rawlist)["current_pos"]:
-            return {"direct": "sell", "zhiying": res["-2sd"][-1], "zhisun": res["sma"][-1]}
+            return {"direct": "buy"}
+            # sd2 = float(res["2sd"][-1])
+            # sd1 = float(res["1sd"][-1])
+            # if rawlist[-1] >= (2 / 3 * mean(sd2, sd1)):
+            #     return {"direct": "sell"}
+            # elif rawlist[-1] <= (1 / 3 * mean(sd2, sd1)):
+            #     return {"direct": "buy"}
+            # # 还要判断是否是靠近2sd的边缘  如果靠近上缘卖出 靠近下缘买进
+            # return None
+        elif "sell" == res["current_pos"]:
+            return {"direct": "sell"}
+            # sd2 = float(res["-2sd"][-1])
+            # sd1 = float(res["-1sd"][-1])
+            # if rawlist[-1] >= (2 / 3 * mean(sd2, sd1)):
+            #     return {"direct": "sell"}
+            # elif rawlist[-1] <= (1 / 3 * mean(sd2, sd1)):
+            #     return {"direct": "buy"}
+            # return None
         return None
 
 
