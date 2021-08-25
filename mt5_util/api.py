@@ -2,6 +2,7 @@
 import MetaTrader5 as mt5
 from apscheduler.schedulers.blocking import BlockingScheduler
 
+
 def loginmt5(account, password, server):
     """登录mt5返回实例"""
     # display data on the MetaTrader 5 package
@@ -39,12 +40,16 @@ class BasicMt5:
     start 和 trade 方法进行循环自动交易
     """
 
-    def __init__(self, mt5=None, symbol=None, deviation=1000, maxdiancha=1000, lot=1.00):
+    def __init__(self, mt5=None, symbol=None, deviation=1000, maxdiancha=1000, lot=1.00, use_stop_loss=False,
+                 use_take_profit=False):
         self.mt5 = mt5
         self.symbol = symbol  # 标的外汇
         self.maxdiancha = maxdiancha  # 开仓时点差大小  市价买入需要考虑 点差太大不开仓
         self.lot = lot  # 手数
         self.deviation = deviation  # 开仓时允许的价格波动
+        self.use_stop_loss = use_stop_loss  # 是否使用止损
+        self.use_take_profit = use_take_profit  # 是否使用止盈
+
 
     def get_history(self, period=None, num=3, pos=0):
         # 获取过去的bar从当前开始

@@ -172,8 +172,9 @@ class BullinTwoSide(BasicMt5):
         for index, i in enumerate(his):
             if index > 22 and i != his[-1]:
                 close.append(i["收盘"])
-                total_profit.append(profit[-1] + (total_profit and total_profit[-1] or 0))
                 profit = self.update_profit(his, index, profit)
+                total_profit.append(profit[-1] + (total_profit and total_profit[-1] or 0))
+
 
         datadict = {'profit': profit,
                     "total_profit": total_profit,
@@ -200,40 +201,49 @@ class BullinTwoSide(BasicMt5):
         return win_money
 
     def get_out_point(self, his, index, direct):
-        """计算出场点"""
-        stop_loss = self.stop_loss()
-        take_profit = self.take_profit()
+        """计算出场点  存在可能不设置止损的情况 增加可选性 进行对比"""
+        stop_loss = self.stop_loss(his, index, direct)
+        take_profit = self.take_profit(his, index, direct)
 
         next_day_close = his[index + 1]["收盘"]
         next_day_min = his[index + 1]["最低价"]
         next_day_max = his[index + 1]["最高价"]
         if direct:
-            if next_day_min <= stop_loss:
+            if stop_loss and next_day_min <= stop_loss:
                 out_point = stop_loss
-            elif next_day_max >= take_profit:
+            elif take_profit and next_day_max >= take_profit:
                 out_point = take_profit
             else:
                 out_point = next_day_close
 
-        else: # 卖空的情况
-            if next_day_max >= stop_loss:
+        else:  # 卖空的情况
+            if stop_loss and next_day_max >= stop_loss:
                 out_point = stop_loss
-            elif next_day_min <= take_profit:
+            elif take_profit and next_day_min <= take_profit:
                 out_point = take_profit
             else:
                 out_point = next_day_close
 
         return out_point
 
-
-
-    def stop_loss(self):
+    def stop_loss(self, his, index, direct):
         """止损点"""
-        return 100
+        rawlist = his[index - 22:index]
+        rawlist = [i["收盘"] for i in rawlist]
+        print("rawlist", rawlist)
+        res = BullinUtil().get_price_status(rawlist)
+        sl_point = res["sma"][-1]
+        return self.use_stop_loss and sl_point or 0
 
-    def take_profit(self):
+    def take_profit(self, his, index, direct):
         """止盈出场点"""
-        return 200
+        rawlist = his[index - 22:index]
+        rawlist = [i["收盘"] for i in rawlist]
+        print("rawlist", rawlist)
+        res = BullinUtil().get_price_status(rawlist)
+
+        tp_point = direct and res["2sd"][-1] or res["-2sd"][-1]
+        return self.use_take_profit and tp_point or 0
 
     def predict_trend(self, rawlist):
         """
