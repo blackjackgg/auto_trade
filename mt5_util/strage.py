@@ -181,8 +181,14 @@ class BullinTwoSide(BasicMt5):
                     "total_profit": total_profit,
                     "close": close,
                     }
-        plot.plot_line(datadict, title="%s:%s天" % (title, num))
+        tail1 = self.use_take_profit and "使用止盈" or ""
+        tail2 = self.use_stop_loss and "使用止损" or ""
+
+        tail = (tail1 + tail2) or "不使用止损止盈"
+
+        plot.plot_line(datadict, title="%s:%s天-%s \n 交易次数：%s, 盈利：%s次，亏损%s次，胜率%s \n 总收益：%s,最大亏损：%.2f,最大盈利:%.2f " % (title, num, tail,self.trade_times,self.win_times,self.lose_times,round(self.win_times/self.trade_times,2),round(total_profit[-1],2),min(profit),max(profit)))
         # plot.plot_line({"close": close})
+
 
     def update_profit(self, his, index, profit):
         """计算单次投入的盈利 通过某段时间的20天sma值来计算"""
@@ -190,6 +196,7 @@ class BullinTwoSide(BasicMt5):
         res = self.predict_trend(rawlist)
         print("updateprofit", res)
         if res:
+            self.trade_times += 1
             direct2 = res["direct"] == "buy"
             print("Seconddirect", direct2)
             win_money = self.get_win_money(his, index, direct2)
@@ -203,6 +210,10 @@ class BullinTwoSide(BasicMt5):
         in_point = his[index]["收盘"]
         out_point = self.get_out_point(his, index, direct)
         win_money = (out_point - in_point) * (direct and 1 or -1)
+        if win_money > 0:
+            self.win_times += 1
+        else:
+            self.lose_times += 1
         return win_money
 
     def get_out_point(self, his, index, direct):

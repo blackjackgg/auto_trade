@@ -44,6 +44,9 @@ class BasicMt5:
 
     def __init__(self, mt5=None, symbol=None, deviation=1000, maxdiancha=1000, lot=1.00, use_stop_loss=False,
                  use_take_profit=False):
+        self.trade_times = 0  # 计算交易次数 和 胜率
+        self.win_times = 0
+        self.lose_times = 0
         self.mt5 = mt5
         self.symbol = symbol  # 标的外汇
         self.maxdiancha = maxdiancha  # 开仓时点差大小  市价买入需要考虑 点差太大不开仓

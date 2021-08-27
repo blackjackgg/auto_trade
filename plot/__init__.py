@@ -10,5 +10,5 @@ def plot_line(datadict,title=""):
 
     # df.plot(kind='bar')  ## 默认是折线图   这是盈利曲线 area  bar
     df2.plot()
-    plt.title(label=title)
+    plt.title(label=title,fontsize=12)
     plt.show()
