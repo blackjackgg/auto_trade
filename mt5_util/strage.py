@@ -262,24 +262,24 @@ class BullinTwoSide(BasicMt5):
         print("rawlist", rawlist)
         res = BullinUtil().get_price_status(rawlist)
         if "buy" == res["current_pos"]:
-            return {"direct": "buy"}
-            # sd2 = float(res["2sd"][-1])
-            # sd1 = float(res["1sd"][-1])
-            # if rawlist[-1] >= (2 / 3 * mean(sd2, sd1)):
-            #     return {"direct": "sell"}
-            # elif rawlist[-1] <= (1 / 3 * mean(sd2, sd1)):
-            #     return {"direct": "buy"}
-            # # 还要判断是否是靠近2sd的边缘  如果靠近上缘卖出 靠近下缘买进
-            # return None
+            # return {"direct": "buy"}
+            sd2 = float(res["2sd"][-1])
+            sd1 = float(res["1sd"][-1])
+            if rawlist[-1] >= (2 / 3 * mean(sd2, sd1)):
+                return {"direct": "sell"}
+            elif rawlist[-1] <= (1 / 3 * mean(sd2, sd1)):
+                return {"direct": "buy"}
+            # 还要判断是否是靠近2sd的边缘  如果靠近上缘卖出 靠近下缘买进
+            return None
         elif "sell" == res["current_pos"]:
-            return {"direct": "sell"}
-            # sd2 = float(res["-2sd"][-1])
-            # sd1 = float(res["-1sd"][-1])
-            # if rawlist[-1] >= (2 / 3 * mean(sd2, sd1)):
-            #     return {"direct": "sell"}
-            # elif rawlist[-1] <= (1 / 3 * mean(sd2, sd1)):
-            #     return {"direct": "buy"}
-            # return None
+            # return {"direct": "sell"}
+            sd2 = float(res["-2sd"][-1])
+            sd1 = float(res["-1sd"][-1])
+            if rawlist[-1] >= (2 / 3 * mean(sd2, sd1)):
+                return {"direct": "sell"}
+            elif rawlist[-1] <= (1 / 3 * mean(sd2, sd1)):
+                return {"direct": "buy"}
+            return None
         return None
 
 
