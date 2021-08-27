@@ -83,6 +83,7 @@ class BullinUtil():
         # print("center", center_up_range, center_down_range)
         buy_range = [res["1sd"][-1], res["2sd"][-1]]  # 上带
         sell_range = [res["-2sd"][-1], res["-1sd"][-1]]  # 下带
+
         # print("buy_sell", center_up_range, center_down_range)
 
         def get_pos(point):
@@ -96,7 +97,7 @@ class BullinUtil():
         last_2_point = res['dataset'][-2]
         pre_pos = get_pos(last_2_point)
         current_pos = get_pos(last_point)
-        print("current_pos",current_pos, pre_pos)
+        print("current_pos", current_pos, pre_pos)
         return {"current_pos": current_pos, "pre_pos": pre_pos, **res}
 
 
@@ -164,7 +165,7 @@ class BullinTwoSide(BasicMt5):
     三个函数的写作即可！
     """
 
-    def test_period_profit(self, period=None, num=100):
+    def test_period_profit(self, period=None, num=100, title="布林带两端交易收益曲线"):
         """某个周期盈利能力测试  默认测试100条数据  生产盈利曲线！"""
         his = self.get_history(num=num, period=period)
         profit = []  # 盈利
@@ -180,18 +181,18 @@ class BullinTwoSide(BasicMt5):
                     "total_profit": total_profit,
                     "close": close,
                     }
-        plot.plot_line(datadict)
-        plot.plot_line({"close": close})
+        plot.plot_line(datadict, title="%s:%s天" % (title, num))
+        # plot.plot_line({"close": close})
 
     def update_profit(self, his, index, profit):
         """计算单次投入的盈利 通过某段时间的20天sma值来计算"""
         rawlist = his[index - 22:index]
         res = self.predict_trend(rawlist)
-        print("updateprofit",res)
+        print("updateprofit", res)
         if res:
             direct2 = res["direct"] == "buy"
-            print("Seconddirect",direct2)
-            win_money = self.get_win_money(his, index,direct2)
+            print("Seconddirect", direct2)
+            win_money = self.get_win_money(his, index, direct2)
             profit.append(win_money * 1000)
         else:
             profit.append(0)
@@ -213,7 +214,7 @@ class BullinTwoSide(BasicMt5):
         next_day_min = his[index + 1]["最低价"]
         next_day_max = his[index + 1]["最高价"]
 
-        print("getoutdirect",direct)
+        print("getoutdirect", direct)
         if direct:
             print("buyin")
             if stop_loss and next_day_min <= stop_loss:
